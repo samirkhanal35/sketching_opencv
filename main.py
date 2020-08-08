@@ -1,43 +1,177 @@
+import tkinter as tk
+from tkinter import filedialog
 import cv2
+from PIL import Image, ImageTk
 
-def render(img_rgb):
-    numDownSamples = 2 # number of downscaling steps
-    numBilateralFilters = 5  # number of bilateral filtering steps
+#from tkinter import *
+window = tk.Tk()
 
-    # -- STEP 1 --
-    # downsample image using Gaussian pyramid
-    img_color = img_rgb
-    for _ in range(numDownSamples):
-        img_color = cv2.pyrDown(img_color)
+window.title("Sketching")
+window.geometry('1200x800')
 
-    # repeatedly apply small bilateral filter instead of applying
-    # one large filter
-    for _ in range(numBilateralFilters):
-        img_color = cv2.bilateralFilter(img_color, 9, 9, 7)
+#header
+header = tk.Label(window, text="GET YOUR IMAGE SKETCHED HERE!", bg="red", fg="black" ,font=("none bold",35), anchor="n") 
+#anchor=n for top-central justification
+header.place(x=300,y=1)
+#header.pack()
 
-    # upsample image to original size
-    for _ in range(numDownSamples):
-        img_color = cv2.pyrUp(img_color)
+#left frame
+left_frame = tk.Frame(window, width=400, height=400, highlightbackground="black", highlightthickness=1)
+left_frame.place(x=40,y=150)
+left_frame.pack_propagate(0)
 
-    # -- STEPS 2 and 3 --
-    # convert to grayscale and apply median blur
-    img_gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
-    img_blur = cv2.medianBlur(img_gray, 5)
+#left image label
+# inp_image = tk.Label(left_frame, text="Input Image", font=("none Bold",10))
+# inp_image.pack()
 
-    # -- STEP 4 --
-    # detect and enhance edges
-    img_edge = cv2.adaptiveThreshold(img_blur, 255,
-        cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 2)
 
-    # -- STEP 5 --
-    # convert back to color so that it can be bit-ANDed
-    # with color image
-    img_edge = cv2.cvtColor(img_edge, cv2.COLOR_GRAY2RGB)
-    return cv2.bitwise_and(img_color, img_edge)
+#left label
+left_label = tk.Label(window, text="Input Image", font=("none Bold",20))
+left_label.place(x=200,y=120)
+
+
+#rigt_frame
+rigt_frame = tk.Frame(window, width=400, height=400, highlightbackground="black", highlightthickness=1)
+rigt_frame.place(x=760,y=150)
+rigt_frame.pack_propagate(0)
+
+#right image label
+# out_image = tk.Label(rigt_frame, text="Output Image", font=("none Bold",10))
+# out_image.pack()
+
+
+
+#right label
+right_label = tk.Label(window, text="Output Image", font=("none Bold",20))
+right_label.place(x=930,y=120)
+
+
+
+class variables:
+    img = ""
+    inp_img = ""
+    out_img = ""
+
+    #left image label
+    inp_image = tk.Label(left_frame, text="Input Image", font=("none Bold",10))
+    inp_image.pack()
+
+    #right image label
+    out_image = tk.Label(rigt_frame, text="Output Image", font=("none Bold",10))
+    out_image.pack()
+
+def working_design():
+    #image selection button
+    img_selection_btn = tk.Button(window, text="Select Image", fg="black", font=("none Bold",20) , command=open_file)
+    img_selection_btn.place(x=520, y=100)
+    #*--------------------------------
+    # #sketching button
+    img_sketching_btn = tk.Button(window, text="Sketch", fg="black", font=("none Bold",20) , command=Sketching)
+    img_sketching_btn.place(x=520, y=150)
+
+
+def open_file(): 
+    filename = filedialog.askopenfilename(filetypes=(("JPEG","*.jpg"),("PNG","*.png"),("All Files","*.*"))) 
+
+    if filename!="" :
+        variables.img = cv2.imread(filename)
+        #resizing for image display
+        variables.inp_img = resize_img(variables.img)
+        #Rearranging the color channel
+        b,g,r = cv2.split(variables.inp_img)
+        img = cv2.merge((r,g,b))
+
+        #convert image object into TkPhoto object
+        im = Image.fromarray(img)
+        img1 = ImageTk.PhotoImage(image=im)
+
+        variables.inp_image.pack_forget()
+        left_frame.update()
+
+        variables.inp_image = tk.Label(left_frame, image=img1)
+        variables.inp_image.image = img1
+        variables.inp_image.pack()
+        left_frame.update()
+
+        
+        
+ 
+
+def resize_img(img):
     
-img = cv2.imread('myphoto.jpg')
+    img1 = cv2.resize(img,(400,400)) #(a high-quality downsampling filter)       
+    return img1
 
-img1 = render(img)
+def Sketching():
+    img_rgb = variables.img
+    print("inp img:",img_rgb.shape)
 
-cv2.imshow('image',img1)
-cv2.waitKey(5000)
+    #convert to gray scale
+    grayImage = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+
+    #invert the gray image
+    grayImageInv = 255 - grayImage
+
+    #Apply gaussian blur
+    grayImageInv = cv2.GaussianBlur(grayImageInv, (21, 21), 0)
+
+    #blend using color dodge
+    img = cv2.divide(grayImage, 255-grayImageInv, scale=256.0)
+    
+    #resizing for image display
+    variables.out_img = resize_img(img)
+    
+    #convert image object into TkPhoto object
+    im = Image.fromarray(variables.out_img)
+    img1 = ImageTk.PhotoImage(image=im)
+    
+    variables.out_image.pack_forget()
+    rigt_frame.update()
+
+    variables.out_image = tk.Label(rigt_frame, image=img1)
+    variables.out_image.image = img1
+    variables.out_image.pack()
+    rigt_frame.update()
+
+
+working_design()
+
+window.mainloop()
+
+'''
+import cv2
+import sys
+
+#read image
+image = cv2.imread("../assets/anish.jpg")
+
+#check if image exists
+if image is None:
+    print("can not find image")
+    sys.exit()
+
+#convert to gray scale
+grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+#invert the gray image
+grayImageInv = 255 - grayImage
+
+#Apply gaussian blur
+grayImageInv = cv2.GaussianBlur(grayImageInv, (21, 21), 0)
+
+#blend using color dodge
+output = cv2.divide(grayImage, 255-grayImageInv, scale=256.0)
+
+#create windows to dsiplay images
+cv2.namedWindow("image", cv2.WINDOW_AUTOSIZE)
+cv2.namedWindow("pencilsketch", cv2.WINDOW_AUTOSIZE)
+
+#display images
+cv2.imshow("image", image)
+cv2.imshow("pencilsketch", output)
+
+#press esc to exit the program
+cv2.waitKey(0)
+
+#close all the opened windows
+cv2.destroyAllWindows()'''
