@@ -117,12 +117,28 @@ def Sketching():
 
     #blend using color dodge
     img = cv2.divide(grayImage, 255-grayImageInv, scale=256.0)
+
+    imgc = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+    #brightness decrement
+    value = 30
+    lim = 60
+    hsv = cv2.cvtColor(imgc, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(hsv)
+    
+    v[v > lim] -= value   
+    
+
+    final_hsv = cv2.merge((h, s, v))
+    imgf = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
     
     #resizing for image display
-    variables.out_img = resize_img(img)
-    
+    variables.out_img = resize_img(imgf)
+    #Rearranging the color channel
+    b,g,r = cv2.split(variables.out_img)
+    img = cv2.merge((r,g,b))
     #convert image object into TkPhoto object
-    im = Image.fromarray(variables.out_img)
+    im = Image.fromarray(img)
     img1 = ImageTk.PhotoImage(image=im)
     
     variables.out_image.pack_forget()
